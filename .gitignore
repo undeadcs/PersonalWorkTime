@@ -1,0 +1,9 @@
+*~
+.settings/
+.project
+.externalToolBuilders/
+.buildpath
+.project
+.cproject
+**/pwt/Debug/
+**/pwt-gui/Debug/
