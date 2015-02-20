@@ -8,8 +8,10 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <map>
+#include <list>
 #include <glibmm.h>
 #include <libxml++/libxml++.h>
-#include <sqlite/sqlite3.h>
+#include <sqlite3.h>
 
 #endif
