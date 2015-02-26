@@ -8,9 +8,12 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <string.h>
 #include <map>
 #include <list>
+#include <ctime>
 #include <glibmm.h>
+#include <sstream>
 #include <libxml++/libxml++.h>
 #include <sqlite3.h>
 

@@ -5,6 +5,7 @@
 #include "config.h"
 #include "log.h"
 #include "task.h"
+#include "WorkRecord.h"
 #include "PersonalWorkTime.h"
 
 #endif

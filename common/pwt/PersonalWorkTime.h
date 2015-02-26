@@ -13,7 +13,9 @@ namespace pwt {
 			PWTRESULT_TASK_ALREADY_EXISTS,
 			PWTRESULT_INVALID_TASK_LABEL,
 			PWTRESULT_INVALID_TASK_TITLE,
-			PWTRESULT_INVALID_LIST_PATTERN
+			PWTRESULT_INVALID_LIST_PATTERN,
+			PWTRESULT_NOTHING_RUNNING,
+			PWTRESULT_ALREADY_RUNNING
 		};
 
 	private:
@@ -27,12 +29,13 @@ namespace pwt {
 
 		virtual ~CPersonalWorkTime( );
 
-		PWTResult	AddTask( const Glib::ustring& label, const Glib::ustring& title );
+		PWTResult AddTask( const Glib::ustring& label, const Glib::ustring& title );
 		PWTResult UpdTask( const Glib::ustring& label, const Glib::ustring& title );
 		PWTResult DelTask( const Glib::ustring& label );
 		std::list< CTask > ListTask( const Glib::ustring& pattern );
 		PWTResult StartTask( const Glib::ustring& label );
-		PWTResult StopTask( const Glib::ustring& label );
+		PWTResult StopTask( );
+		PWTResult Status( CWorkRecord& record );
 
 	private:
 		void	OpenDatabase( const Glib::ustring& filename );

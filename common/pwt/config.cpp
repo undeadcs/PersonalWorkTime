@@ -42,14 +42,10 @@ namespace pwt {
 			elem = dynamic_cast< const xmlpp::Element* >( *i );
 			if ( elem ) {
 				if ( ( elem->get_name( ) == "log" ) && ( txt = elem->get_child_text( ) ) && !txt->get_content( ).empty( ) ) {
-					std::cout << txt->get_content( ) << std::endl;
-
 					m_szLog = txt->get_content( );
 					bFoundLog = true;
 				}
 				if ( ( elem->get_name( ) == "database" ) && ( txt = elem->get_child_text( ) ) && !txt->get_content( ).empty( ) ) {
-					std::cout << txt->get_content( ) << std::endl;
-
 					m_szDatabase = txt->get_content( );
 					bFoundDatabase = true;
 				}
