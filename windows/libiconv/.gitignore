@@ -3,3 +3,5 @@
 !*.cpp
 !*.h
 !*.txt
+!/include/
+!*.с
