@@ -71,30 +71,12 @@ namespace pwt {
 	}
 
 	CPersonalWorkTime::PWTResult CPersonalWorkTime::AddTask( const Glib::ustring& label, const Glib::ustring& title ) {
-		sqlite3_stmt* pStatement;
-		Glib::ustring query;
-		int count = 0;
-
-		query = "SELECT COUNT(*) AS cnt FROM pwt_tasks WHERE task_label=:label";
-
-		if ( sqlite3_prepare_v2( m_pDb, query.c_str( ), query.bytes( ), &pStatement, NULL ) != SQLITE_OK ) {
-			return CPersonalWorkTime::PWTRESULT_DATABASE_ERROR;
-		}
-
-		sqlite3_bind_text( pStatement, sqlite3_bind_parameter_index( pStatement, ":label" ), label.c_str( ), label.bytes( ), NULL );
-
-		if ( sqlite3_step( pStatement ) == SQLITE_ROW ) {
-			count = sqlite3_column_int( pStatement, 0 );
-		}
-
-		sqlite3_finalize( pStatement );
-
-		if ( count > 0 ) {
+		if ( GetTaskId( label ) ) {
 			return CPersonalWorkTime::PWTRESULT_TASK_ALREADY_EXISTS;
 		}
 
-		query = "INSERT INTO pwt_tasks(task_label, task_title) VALUES (:label, :title)";
-
+		sqlite3_stmt* pStatement;
+		Glib::ustring query = "INSERT INTO pwt_tasks(task_label, task_title) VALUES (:label, :title)";
 		if ( sqlite3_prepare_v2( m_pDb, query.c_str( ), query.bytes( ), &pStatement, NULL ) != SQLITE_OK ) {
 			return CPersonalWorkTime::PWTRESULT_DATABASE_ERROR;
 		}
@@ -167,35 +149,18 @@ namespace pwt {
 	}
 
 	CPersonalWorkTime::PWTResult CPersonalWorkTime::UpdTask( const Glib::ustring& label, const Glib::ustring& title ) {
-		sqlite3_stmt* pStatement;
-		Glib::ustring query;
-		int count = 0;
-
-		query = "SELECT COUNT(*) AS cnt FROM pwt_tasks WHERE task_label=:label";
-
-		if ( sqlite3_prepare_v2( m_pDb, query.c_str( ), query.bytes( ), &pStatement, NULL ) != SQLITE_OK ) {
-			return CPersonalWorkTime::PWTRESULT_DATABASE_ERROR;
-		}
-
-		sqlite3_bind_text( pStatement, sqlite3_bind_parameter_index( pStatement, ":label" ), label.c_str( ), label.bytes( ), NULL );
-
-		if ( sqlite3_step( pStatement ) == SQLITE_ROW ) {
-			count = sqlite3_column_int( pStatement, 0 );
-		}
-
-		sqlite3_finalize( pStatement );
-
-		if ( count != 1 ) {
+		int taskId = GetTaskId( label );
+		if ( !taskId ) {
 			return CPersonalWorkTime::PWTRESULT_TASK_NOT_FOUND;
 		}
 
-		query = "UPDATE pwt_tasks SET task_title=:title WHERE task_label=:label";
-
+		sqlite3_stmt* pStatement;
+		Glib::ustring query = "UPDATE pwt_tasks SET task_title=:title WHERE task_id=:task_id";
 		if ( sqlite3_prepare_v2( m_pDb, query.c_str( ), query.bytes( ), &pStatement, NULL ) != SQLITE_OK ) {
 			return CPersonalWorkTime::PWTRESULT_DATABASE_ERROR;
 		}
 
-		sqlite3_bind_text( pStatement, sqlite3_bind_parameter_index( pStatement, ":label" ), label.c_str( ), label.bytes( ), NULL );
+		sqlite3_bind_int( pStatement, sqlite3_bind_parameter_index( pStatement, ":task_id" ), taskId );
 		sqlite3_bind_text( pStatement, sqlite3_bind_parameter_index( pStatement, ":title" ), title.c_str( ), title.bytes( ), NULL );
 
 		int res = sqlite3_step( pStatement );
@@ -207,38 +172,38 @@ namespace pwt {
 	}
 
 	CPersonalWorkTime::PWTResult CPersonalWorkTime::DelTask( const Glib::ustring& label ) {
-		sqlite3_stmt* pStatement;
-		Glib::ustring query;
-		int count = 0;
-
-		query = "SELECT COUNT(*) AS cnt FROM pwt_tasks WHERE task_label=:label";
-
-		if ( sqlite3_prepare_v2( m_pDb, query.c_str( ), query.bytes( ), &pStatement, NULL ) != SQLITE_OK ) {
-			return CPersonalWorkTime::PWTRESULT_DATABASE_ERROR;
-		}
-
-		sqlite3_bind_text( pStatement, sqlite3_bind_parameter_index( pStatement, ":label" ), label.c_str( ), label.bytes( ), NULL );
-
-		if ( sqlite3_step( pStatement ) == SQLITE_ROW ) {
-			count = sqlite3_column_int( pStatement, 0 );
-		}
-
-		sqlite3_finalize( pStatement );
-
-		if ( count != 1 ) {
+		int taskId = GetTaskId( label );
+		if ( !taskId ) {
 			return CPersonalWorkTime::PWTRESULT_TASK_NOT_FOUND;
 		}
 
-		query = "DELETE FROM pwt_tasks WHERE task_label=:label";
-
+		sqlite3_stmt* pStatement;
+		Glib::ustring query = "DELETE FROM pwt_tasks WHERE task_id=:task_id";
 		if ( sqlite3_prepare_v2( m_pDb, query.c_str( ), query.bytes( ), &pStatement, NULL ) != SQLITE_OK ) {
 			return CPersonalWorkTime::PWTRESULT_DATABASE_ERROR;
 		}
 
-		sqlite3_bind_text( pStatement, sqlite3_bind_parameter_index( pStatement, ":label" ), label.c_str( ), label.bytes( ), NULL );
+		sqlite3_bind_int( pStatement, sqlite3_bind_parameter_index( pStatement, ":task_id" ), taskId );
 
 		int res = sqlite3_step( pStatement );
-		CPersonalWorkTime::PWTResult result = ( res == SQLITE_ERROR ) ? CPersonalWorkTime::PWTRESULT_DATABASE_ERROR : CPersonalWorkTime::PWTRESULT_OK;
+		sqlite3_finalize( pStatement );
+
+		if ( res == SQLITE_ERROR ) {
+			return CPersonalWorkTime::PWTRESULT_DATABASE_ERROR;
+		}
+
+		query = "DELETE FROM pwt_work_records WHERE record_task_id=:task_id";
+		if ( sqlite3_prepare_v2( m_pDb, query.c_str( ), query.bytes( ), &pStatement, NULL ) != SQLITE_OK ) {
+			return CPersonalWorkTime::PWTRESULT_DATABASE_ERROR;
+		}
+
+		sqlite3_bind_int( pStatement, sqlite3_bind_parameter_index( pStatement, ":task_id" ), taskId );
+
+		CPersonalWorkTime::PWTResult result = CPersonalWorkTime::PWTRESULT_OK;
+
+		if ( sqlite3_step( pStatement ) == SQLITE_ERROR ) {
+			result = CPersonalWorkTime::PWTRESULT_DATABASE_ERROR;
+		}
 
 		sqlite3_finalize( pStatement );
 
@@ -259,30 +224,14 @@ namespace pwt {
 	}
 
 	CPersonalWorkTime::PWTResult CPersonalWorkTime::StartTask( const Glib::ustring& label ) {
-		sqlite3_stmt* pStatement;
-		Glib::ustring query;
-		int taskId = 0;
-
-		query = "SELECT task_id AS cnt FROM pwt_tasks WHERE task_label=:label";
-
-		if ( sqlite3_prepare_v2( m_pDb, query.c_str( ), query.bytes( ), &pStatement, NULL ) != SQLITE_OK ) {
-			return CPersonalWorkTime::PWTRESULT_DATABASE_ERROR;
-		}
-
-		sqlite3_bind_text( pStatement, sqlite3_bind_parameter_index( pStatement, ":label" ), label.c_str( ), label.bytes( ), NULL );
-
-		if ( sqlite3_step( pStatement ) == SQLITE_ROW ) {
-			taskId = sqlite3_column_int( pStatement, 0 );
-		}
-
-		sqlite3_finalize( pStatement );
-
+		int taskId = GetTaskId( label );
 		if ( !taskId ) {
 			return CPersonalWorkTime::PWTRESULT_TASK_NOT_FOUND;
 		}
 
 		// предварительно необходимо завершить текущую задачу
-		query = "SELECT record_id, record_task_id FROM pwt_work_records WHERE record_end IS NULL";
+		sqlite3_stmt* pStatement;
+		Glib::ustring query = "SELECT record_id, record_task_id FROM pwt_work_records WHERE record_end IS NULL";
 		if ( sqlite3_prepare_v2( m_pDb, query.c_str( ), query.bytes( ), &pStatement, NULL ) != SQLITE_OK ) {
 			return CPersonalWorkTime::PWTRESULT_DATABASE_ERROR;
 		}
@@ -439,5 +388,173 @@ namespace pwt {
 		sqlite3_finalize( pStatement );
 
 		return result;
+	}
+
+	CPersonalWorkTime::PWTResult CPersonalWorkTime::CopyTask( const Glib::ustring& label, const Glib::ustring& labelNew, const Glib::ustring& titleNew ) {
+		if ( GetTaskId( labelNew ) ) {
+			return CPersonalWorkTime::PWTRESULT_TASK_ALREADY_EXISTS;
+		}
+
+		int origTaskId = GetTaskId( label );
+		if ( !origTaskId ) {
+			return CPersonalWorkTime::PWTRESULT_TASK_NOT_FOUND;
+		}
+
+		sqlite3_stmt* pStatement;
+		Glib::ustring query = "INSERT INTO pwt_tasks(task_label, task_title) VALUES (:label, :title)";
+		if ( sqlite3_prepare_v2( m_pDb, query.c_str( ), query.bytes( ), &pStatement, NULL ) != SQLITE_OK ) {
+			return CPersonalWorkTime::PWTRESULT_DATABASE_ERROR;
+		}
+
+		sqlite3_bind_text( pStatement, sqlite3_bind_parameter_index( pStatement, ":label" ), labelNew.c_str( ), labelNew.bytes( ), NULL );
+		sqlite3_bind_text( pStatement, sqlite3_bind_parameter_index( pStatement, ":title" ), titleNew.c_str( ), titleNew.bytes( ), NULL );
+
+		int res = sqlite3_step( pStatement );
+		sqlite3_finalize( pStatement );
+
+		if ( res == SQLITE_ERROR ) {
+			return CPersonalWorkTime::PWTRESULT_DATABASE_ERROR;
+		}
+
+		int taskId = sqlite3_last_insert_rowid( m_pDb );
+		if ( !taskId ) {
+			return CPersonalWorkTime::PWTRESULT_DATABASE_ERROR;
+		}
+
+		query = "SELECT record_begin, record_end FROM pwt_work_records WHERE record_task_id=:task_id";
+		if ( sqlite3_prepare_v2( m_pDb, query.c_str( ), query.bytes( ), &pStatement, NULL ) != SQLITE_OK ) {
+			return CPersonalWorkTime::PWTRESULT_DATABASE_ERROR;
+		}
+
+		sqlite3_stmt* pInsert;
+		query = "INSERT INTO pwt_work_records(record_task_id, record_begin, record_end) VALUES (:record_task_id, :record_begin, :record_end)";
+		if ( sqlite3_prepare_v2( m_pDb, query.c_str( ), query.bytes( ), &pInsert, NULL ) != SQLITE_OK ) {
+			sqlite3_finalize( pStatement );
+
+			return CPersonalWorkTime::PWTRESULT_DATABASE_ERROR;
+		}
+
+		sqlite3_bind_int( pStatement, sqlite3_bind_parameter_index( pStatement, ":task_id" ), origTaskId );
+
+		CPersonalWorkTime::PWTResult result = CPersonalWorkTime::PWTRESULT_OK;
+		Glib::ustring dtBegin, dtEnd;
+
+		while( sqlite3_step( pStatement ) == SQLITE_ROW ) {
+			dtBegin	= SqliteStrToUstring( sqlite3_column_text( pStatement, 0 ), sqlite3_column_bytes( pStatement, 0 ) );
+			dtEnd	= SqliteStrToUstring( sqlite3_column_text( pStatement, 1 ), sqlite3_column_bytes( pStatement, 1 ) );
+
+			sqlite3_bind_int( pInsert, sqlite3_bind_parameter_index( pInsert, ":record_task_id" ), taskId );
+			sqlite3_bind_text( pInsert, sqlite3_bind_parameter_index( pInsert, ":record_begin" ), dtBegin.c_str( ), dtBegin.bytes( ), NULL );
+			sqlite3_bind_text( pInsert, sqlite3_bind_parameter_index( pInsert, ":record_end" ), dtEnd.c_str( ), dtEnd.bytes( ), NULL );
+
+			if ( sqlite3_step( pInsert ) == SQLITE_ERROR ) {
+				result = CPersonalWorkTime::PWTRESULT_DATABASE_ERROR;
+				break;
+			}
+
+			sqlite3_reset( pInsert );
+		}
+
+		sqlite3_finalize( pInsert );
+		sqlite3_finalize( pStatement );
+
+		return result;
+	}
+
+	int CPersonalWorkTime::GetTaskId( const Glib::ustring& label ) {
+		int taskId = 0;
+		sqlite3_stmt* pStatement;
+		Glib::ustring query = "SELECT task_id FROM pwt_tasks WHERE task_label=:label";
+		if ( sqlite3_prepare_v2( m_pDb, query.c_str( ), query.bytes( ), &pStatement, NULL ) != SQLITE_OK ) {
+			return 0;
+		}
+
+		sqlite3_bind_text( pStatement, sqlite3_bind_parameter_index( pStatement, ":label" ), label.c_str( ), label.bytes( ), NULL );
+
+		if ( sqlite3_step( pStatement ) == SQLITE_ROW ) {
+			taskId = sqlite3_column_int( pStatement, 0 );
+		}
+
+		sqlite3_finalize( pStatement );
+
+		return taskId;
+	}
+
+	CPersonalWorkTime::PWTResult CPersonalWorkTime::Export( PWTExport type, const char* filename ) {
+		if ( m_objConfig.GetDatabasePath( ) == Glib::ustring( filename ) ) {
+			return CPersonalWorkTime::PWTRESULT_FILESYSTEM_ERROR;
+		}
+
+		std::ofstream dst( filename, std::ios::binary );
+		if ( !dst ) {
+			return CPersonalWorkTime::PWTRESULT_FILESYSTEM_ERROR;
+		}
+
+		if ( type == CPersonalWorkTime::PWTEXPORT_SQLITE ) {
+			std::ifstream src( m_objConfig.GetDatabasePath( ).c_str( ), std::ios::binary );
+			if ( !src ) {
+				return CPersonalWorkTime::PWTRESULT_FILESYSTEM_ERROR;
+			}
+
+			dst << src.rdbuf( );
+		} else if ( type == CPersonalWorkTime::PWTEXPORT_XML ) {
+			ExportXML( dst );
+		}
+
+		return CPersonalWorkTime::PWTRESULT_OK;
+	}
+
+	void CPersonalWorkTime::ExportXML( std::ostream& dst ) {
+		xmlpp::Document doc;
+		xmlpp::Element	*root = doc.create_root_node( "pwt" ),
+						*nodeRoot = NULL,
+						*node = NULL,
+						*nodeChild = NULL;
+		sqlite3_stmt*	stmtSelect;
+		Glib::ustring	query;
+
+		// экспорт задач
+		nodeRoot = root->add_child( "tasks" );
+
+		query = "SELECT task_id, task_label, task_title FROM pwt_tasks";
+		if ( sqlite3_prepare( m_pDb, query.c_str( ), query.bytes( ), &stmtSelect, NULL ) == SQLITE_OK ) {
+			while( sqlite3_step( stmtSelect ) == SQLITE_ROW ) {
+				node = nodeRoot->add_child( "task" );
+
+				nodeChild = node->add_child( "id" );
+				nodeChild->add_child_text( Glib::ustring::compose( "%1", sqlite3_column_int( stmtSelect, 0 ) ) );
+
+				nodeChild = node->add_child( "label" );
+				nodeChild->add_child_text( SqliteStrToUstring( sqlite3_column_text( stmtSelect, 1 ), sqlite3_column_bytes( stmtSelect, 1 ) ) );
+
+				nodeChild = node->add_child( "title" );
+				nodeChild->add_child_text( SqliteStrToUstring( sqlite3_column_text( stmtSelect, 2 ), sqlite3_column_bytes( stmtSelect, 2 ) ) );
+			}
+
+			sqlite3_finalize( stmtSelect );
+		}
+
+		// экспорт рабочей таблицы
+		nodeRoot = root->add_child( "workRecords" );
+
+		query = "SELECT record_task_id, record_begin, record_end FROM pwt_work_records";
+		if ( sqlite3_prepare( m_pDb, query.c_str( ), query.bytes( ), &stmtSelect, NULL ) == SQLITE_OK ) {
+			while( sqlite3_step( stmtSelect ) == SQLITE_ROW ) {
+				node = nodeRoot->add_child( "workRecord" );
+
+				nodeChild = node->add_child( "taskId" );
+				nodeChild->add_child_text( Glib::ustring::compose( "%1", sqlite3_column_int( stmtSelect, 0 ) ) );
+
+				nodeChild = node->add_child( "begin" );
+				nodeChild->add_child_text( SqliteStrToUstring( sqlite3_column_text( stmtSelect, 1 ), sqlite3_column_bytes( stmtSelect, 1 ) ) );
+
+				nodeChild = node->add_child( "end" );
+				nodeChild->add_child_text( SqliteStrToUstring( sqlite3_column_text( stmtSelect, 2 ), sqlite3_column_bytes( stmtSelect, 2 ) ) );
+			}
+
+			sqlite3_finalize( stmtSelect );
+		}
+
+		doc.write_to_stream_formatted( dst );
 	}
 }

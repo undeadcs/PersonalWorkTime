@@ -10,6 +10,8 @@ void CmdDel( int argc, char** argv );
 void CmdStart( int argc, char** argv );
 void CmdStop( );
 void CmdStatus( );
+void CmdCopy( int argc, char** argv );
+void CmdExport( int argc, char** argv );
 
 int main( int argc, char** argv ) {
 	std::locale::global( std::locale( "" ) );
@@ -34,6 +36,10 @@ int main( int argc, char** argv ) {
 				CmdStop( );
 			} else if ( cmd == "status" ) {
 				CmdStatus( );
+			} else if ( cmd == "copy" ) {
+				CmdCopy( argc, argv );
+			} else if ( cmd == "export" ) {
+				CmdExport( argc, argv );
 			} else {
 				ShowUsage( );
 			}
@@ -99,7 +105,7 @@ void CmdAdd( int argc, char** argv ) {
 		break;
 
 	default:
-		std::cout << "AddTask вернул неизвстный результат" << std::endl;
+		std::cout << "AddTask вернул неизвестный результат" << std::endl;
 		break;
 	}
 }
@@ -149,7 +155,7 @@ void CmdUpd( int argc, char** argv ) {
 		break;
 
 	default:
-		std::cout << "UpdTask вернул неизвстный результат" << std::endl;
+		std::cout << "UpdTask вернул неизвестный результат" << std::endl;
 		break;
 	}
 }
@@ -173,7 +179,7 @@ void CmdDel( int argc, char** argv ) {
 		break;
 
 	default:
-		std::cout << "DelTask вернул неизвстный результат" << std::endl;
+		std::cout << "DelTask вернул неизвестный результат" << std::endl;
 		break;
 	}
 }
@@ -201,7 +207,7 @@ void CmdStart( int argc, char** argv ) {
 		break;
 
 	default:
-		std::cout << "StartTask вернул неизвстный результат" << std::endl;
+		std::cout << "StartTask вернул неизвестный результат" << std::endl;
 		break;
 	}
 }
@@ -303,6 +309,70 @@ void CmdStatus( ) {
 
 	default:
 		std::cout << "StopTask вернул неизвестный результат" << std::endl;
+		break;
+	}
+}
+
+void CmdCopy( int argc, char** argv ) {
+	if ( argc < 5 ) {
+		ShowUsage( );
+		return;
+	}
+
+	pwt::CPersonalWorkTime pwtMain;
+	pwt::CPersonalWorkTime::PWTResult result = pwtMain.CopyTask( argv[ 2 ], argv[ 3 ], argv[ 4 ] );
+
+	switch( result ) {
+	case pwt::CPersonalWorkTime::PWTRESULT_OK:
+		std::cout << "задача скопирована" << std::endl;
+		break;
+
+	case pwt::CPersonalWorkTime::PWTRESULT_TASK_NOT_FOUND:
+		std::cout << "оригинальная задача не найдена" << std::endl;
+		break;
+
+	case pwt::CPersonalWorkTime::PWTRESULT_TASK_ALREADY_EXISTS:
+		std::cout << "задача с такой меткой уже зарегистрирована" << std::endl;
+		break;
+
+	default:
+		std::cout << "StartTask вернул неизвестный результат" << std::endl;
+		break;
+	}
+}
+
+void CmdExport( int argc, char** argv ) {
+	if ( argc < 4 ) {
+		ShowUsage( );
+		return;
+	}
+
+	Glib::ustring szType = Glib::ustring( argv[ 2 ] );
+	pwt::CPersonalWorkTime::PWTExport type;
+
+	if ( szType == "xml" ) {
+		type = pwt::CPersonalWorkTime::PWTEXPORT_XML;
+	} else if ( szType == "excel" ) {
+		type = pwt::CPersonalWorkTime::PWTEXPORT_EXCEL;
+	} else if ( szType == "sqlite" ) {
+		type = pwt::CPersonalWorkTime::PWTEXPORT_SQLITE;
+	} else {
+		std::cout << "неизвестный тип экспорта, доступные: xml, excel, sqlite" << std::endl;
+
+		ShowUsage( );
+		return;
+	}
+
+	pwt::CPersonalWorkTime pwtMain;
+	pwt::CPersonalWorkTime::PWTResult result = pwtMain.Export( type, argv[ 3 ] );
+
+	switch( result ) {
+	case pwt::CPersonalWorkTime::PWTRESULT_OK:
+		std::cout << "экспорт осуществлен" << std::endl;
+		break;
+
+	default:
+		std::cout << "StartTask вернул неизвестный результат" << std::endl;
 		break;
 	}
 }

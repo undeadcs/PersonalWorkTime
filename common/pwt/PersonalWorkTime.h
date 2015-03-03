@@ -15,7 +15,14 @@ namespace pwt {
 			PWTRESULT_INVALID_TASK_TITLE,
 			PWTRESULT_INVALID_LIST_PATTERN,
 			PWTRESULT_NOTHING_RUNNING,
-			PWTRESULT_ALREADY_RUNNING
+			PWTRESULT_ALREADY_RUNNING,
+			PWTRESULT_FILESYSTEM_ERROR
+		};
+
+		enum PWTExport {
+			PWTEXPORT_XML,
+			PWTEXPORT_EXCEL,
+			PWTEXPORT_SQLITE
 		};
 
 	private:
@@ -36,9 +43,13 @@ namespace pwt {
 		PWTResult StartTask( const Glib::ustring& label );
 		PWTResult StopTask( );
 		PWTResult Status( CWorkRecord& record );
+		PWTResult CopyTask( const Glib::ustring& label, const Glib::ustring& labelNew, const Glib::ustring& titleNew );
+		PWTResult Export( PWTExport type, const char* filename );
 
 	private:
 		void	OpenDatabase( const Glib::ustring& filename );
+		int		GetTaskId( const Glib::ustring& label );
+		void	ExportXML( std::ostream& dst );
 	};
 
 	class CExceptionDatabaseOpen : public std::exception {
